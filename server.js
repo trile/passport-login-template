@@ -7,12 +7,14 @@ var engine = require('ejs-mate');
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var flash = require('express-flash');
+var MongoStore = require('connect-mongo')(session); // depends on Express session
+var passport = require('passport');
 
+var secret = require('./config/secret');
 var User = require('./models/user');
 
 
-var MONGODB_URI = 'mongodb://localhost:27017/ecommerce';
-mongoose.connect(MONGODB_URI, function(err) {
+mongoose.connect(secret.MONGODB_URI, function(err) {
     if (err) console.log(err);
     else console.log('Connected to the database');
 })
@@ -29,9 +31,12 @@ app.use(cookieParser());
 app.use(session({
     resave: true,
     saveUninitialized: true,
-    secret: "TriLe!!@#!#!@"
+    secret: secret.secretKey,
+    store: new MongoStore({ url: secret.MONGODB_URI, autoReconnect: true})
 }));
 app.use(flash());
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.engine('ejs', engine);
 app.set('view engine', 'ejs');
@@ -43,7 +48,7 @@ app.use(mainRoutes);
 app.use(userRoutes);
 
 
-app.listen(3000, function(err) {
+app.listen(secret.PORT, function(err) {
      if (err) throw err;
-     console.log("Server is running on port 3000");
+     console.log("Server is running on port " + secret.PORT);
  })
