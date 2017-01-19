@@ -5,3 +5,8 @@ body {
 #navbar-gap {
     margin-top: -5%;
 }
+
+span.no-address {
+    color: #c0392b;
+    font-weight: bold;
+}
