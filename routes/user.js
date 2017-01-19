@@ -32,6 +32,7 @@ router.post('/signup', function(req, res) {
     user.profile.name = req.body.name;
     user.email = req.body.email;
     user.password = req.body.password;
+    user.profile.picture = user.gravatar();
 
     User.findOne({email: req.body.email}, function(err, existingUser) {
         if (existingUser) {
@@ -42,7 +43,10 @@ router.post('/signup', function(req, res) {
                 if (err) return next(err);
             })
 
-            return res.redirect('/');
+            req.logIn(user, function (err) {
+                if (err) return next(err);
+                res.redirect('/profile');
+            })
         }
     });
 });
