@@ -17,7 +17,7 @@ passport.deserializeUser(function(id, done) {
 // Middleware
 passport.use('local-login', new LocalStrategy( {
         usernameField: 'email',
-        passworldField: 'password',
+        passwordField: 'password',
         passReqToCallback: true
     }, function(req, email, password, done) {
         User.findOne({email: email}, function(err, user) {

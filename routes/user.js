@@ -4,9 +4,13 @@ var passportConf = require('../config/passport');
 
 var User = require('../models/user');
 
-router.get('/login', function(req, res) {
-    if (req.user) return res.redirect('/');
-    res.render('accounts/login', {message: req.flash('loginMessage')});
+router.get('/login', (req, res) => {
+    if (req.user)
+        return res.redirect('/');
+    res.render('accounts/login', {
+        messages: req.flash('success'),
+        errors: req.flash('loginMessage')
+    });
 });
 
 router.post('/login', passport.authenticate('local-login', {
@@ -15,67 +19,73 @@ router.post('/login', passport.authenticate('local-login', {
     failureFlash: true
 }));
 
-router.get('/profile', function(req, res, next) {
-    User.findOne({_id: req.user._id}, function(err, user) {
-        if (err) return next(err);
-        res.render('accounts/profile', {user: user});
-    })
+router.get('/profile', ensureAuthenticated, (req, res, next) => {
+    User.findOne({_id: req.user._id}).then((user) => {
+        res.render('accounts/profile', {messages: req.flash('success'), user: user});
+    }).catch((err) => next(err));
 })
 
-
-router.get('/signup', function(req, res, next) {
+router.get('/signup', (req, res, next) => {
     res.render('accounts/signup', {errors: req.flash('errors')});
 })
 
-router.post('/signup', function(req, res) {
+router.post('/signup', (req, res, next) => {
     var user = new User();
     user.profile.name = req.body.name;
     user.email = req.body.email;
     user.password = req.body.password;
     user.profile.picture = user.gravatar();
 
-    User.findOne({email: req.body.email}, function(err, existingUser) {
+    // Need to be rewritten with then
+    User.findOne({email: req.body.email}).then((existingUser) => {
         if (existingUser) {
             req.flash('errors', 'Account with that email address already exists');
             return res.redirect('/signup');
         } else {
-            user.save(function(err, user) {
-                if (err) return next(err);
-            })
-
-            req.logIn(user, function (err) {
-                if (err) return next(err);
-                res.redirect('/profile');
-            })
+            user.save().then(() => {
+                req.flash('success', 'Succesfully registered! You can login');
+                return res.redirect('/login');
+            }, (err) => next(err));
         }
+    }).catch((err) => {
+        console.log("hello" + err);
+        next(err);
     });
 });
 
-router.get('/logout', function(req,res, next) {
+router.get('/logout', (req, res, next) => {
     req.logout();
     res.redirect('/');
 });
 
-router.get('/edit-profile', function (req, res, next) {
-    res.render('accounts/edit-profile', {messages: req.flash('success')});
+router.get('/edit-profile', (req, res, next) => {
+    res.render('accounts/edit-profile');
 });
 
-router.post('/edit-profile', function (req, res, next) {
-    User.findOne({_id: req.user._id}, function (err, user) {
-        if(err) return next(err);
-        console.log("checking param")
-        console.log(req.body.name);
-        console.log(req.body.address);
-        if(req.body.name) user.profile.name = req.body.name;
+router.post('/edit-profile', (req, res, next) => {
+    User.findOne({_id: req.user._id}).then((user) => {
+        if (req.body.name)
+            user.profile.name = req.body.name;
         user.address = req.body.address;
 
-        user.save(function (err) {
-            if (err) return next(err);
-            console.log('success')
+        user.save().then(() => {
             req.flash('success', 'Successfully edited your profile');
-            return res.redirect('/edit-profile');
-        })
-    })
+            return res.redirect('/profile');
+        }, (err) => next(err));
+    }).catch((err) => {
+        console.log("hello" + err);
+        next(err);
+    });
 })
+
+// Access Control
+function ensureAuthenticated(req, res, next) {
+    if (req.isAuthenticated()) {
+        return next();
+    } else {
+        req.flash('loginMessage', 'You are not authorize to view that page');
+        return res.redirect('/login');
+    }
+}
 
 module.exports = router;
